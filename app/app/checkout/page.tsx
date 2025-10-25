@@ -444,22 +444,19 @@ function CheckoutPageContent() {
     if (connectionStatus.type === 'idle') return null;
 
     return (
-      <Card className={`mb-6 ${
-        connectionStatus.type === 'error' ? 'border-red-500' : 
-        connectionStatus.type === 'success' ? 'border-green-500' : ''
-      }`}>
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             {connectionStatus.type === 'loading' && (
-              <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+              <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
             )}
             {connectionStatus.type === 'success' && (
-              <CheckCircleIcon className="w-5 h-5 text-green-500" />
+              <CheckCircleIcon className="w-5 h-5 text-green-600" />
             )}
             {connectionStatus.type === 'error' && (
-              <ExclamationTriangleIcon className="w-5 h-5 text-red-500" />
+              <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
             )}
-            <p className="text-sm font-mono">{connectionStatus.message}</p>
+            <p className="text-sm text-gray-700">{connectionStatus.message}</p>
           </div>
         </CardContent>
       </Card>
@@ -467,49 +464,49 @@ function CheckoutPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <Button
             onClick={() => router.back()}
             variant="ghost"
-            className="mb-4 font-mono text-sm"
+            className="mb-4 -ml-4 text-sm text-gray-600 hover:text-gray-900"
           >
             <ArrowLeftIcon className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold font-mono text-foreground mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Checkout
           </h1>
-          <p className="text-muted-foreground font-mono text-sm">
+          <p className="text-gray-600 text-sm">
             Pay with Stellar (XLM)
           </p>
         </div>
 
         {paymentInfo && (
-          <Card className="mb-6 border-border bg-card">
+          <Card className="mb-6 border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="text-center mb-6">
-                <div className="text-3xl font-mono font-bold text-foreground mb-1">
+                <div className="text-3xl font-bold text-gray-900 mb-1">
                   {paymentInfo.price} XLM
                 </div>
-                <div className="text-sm text-muted-foreground font-mono">
+                <div className="text-sm text-gray-600">
                   {paymentInfo.slotId} • {paymentInfo.size}
                 </div>
               </div>
               
-              <div className="space-y-2 text-sm font-mono">
+              <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Slot:</span>
-                  <span className="text-foreground">{paymentInfo.slotId}</span>
+                  <span className="text-gray-500">Slot:</span>
+                  <span className="text-gray-900 font-medium">{paymentInfo.slotId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Size:</span>
-                  <span className="text-foreground">{paymentInfo.size}</span>
+                  <span className="text-gray-500">Size:</span>
+                  <span className="text-gray-900 font-medium">{paymentInfo.size}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Network:</span>
-                  <span className="text-foreground">Stellar {STELLAR_NETWORK}</span>
+                  <span className="text-gray-500">Network:</span>
+                  <span className="text-gray-900 font-medium">Stellar {STELLAR_NETWORK}</span>
                 </div>
               </div>
             </CardContent>
@@ -517,14 +514,14 @@ function CheckoutPageContent() {
         )}
 
         {queueInfo && !queueInfo.isAvailable && (
-          <Card className="mb-6 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+          <Card className="mb-6 border-yellow-500 bg-yellow-50">
             <CardContent className="p-6">
               <div className="text-center mb-4">
-                <ClockIcon className="w-8 h-8 text-yellow-600 dark:text-yellow-400 mx-auto mb-2" />
-                <h3 className="font-mono font-semibold text-yellow-700 dark:text-yellow-300 text-sm mb-2">
+                <ClockIcon className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+                <h3 className="font-semibold text-yellow-700 text-sm mb-2">
                   Slot Currently Occupied
                 </h3>
-                <div className="space-y-2 text-xs font-mono text-yellow-700 dark:text-yellow-300">
+                <div className="space-y-2 text-xs text-yellow-700">
                   {queueInfo.currentAd && (
                     <div className="flex justify-between px-4">
                       <span>Current ad expires:</span>
@@ -545,10 +542,10 @@ function CheckoutPageContent() {
               </div>
 
               {queueInfo.queueInfo && queueInfo.queueInfo.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-yellow-300 dark:border-yellow-700">
+                <div className="mt-4 pt-4 border-t border-yellow-300">
                   <div className="flex items-center gap-2 mb-3">
-                    <TrophyIcon className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                    <h4 className="text-xs font-mono font-semibold text-yellow-700 dark:text-yellow-300">
+                    <TrophyIcon className="w-4 h-4 text-yellow-600" />
+                    <h4 className="text-xs font-semibold text-yellow-700">
                       Current Queue (Sorted by Bid)
                     </h4>
                   </div>
@@ -556,18 +553,18 @@ function CheckoutPageContent() {
                     {queueInfo.queueInfo.slice(0, 3).map((ad, index) => (
                       <div 
                         key={index}
-                        className="flex justify-between items-center text-xs font-mono bg-yellow-100 dark:bg-yellow-900 p-2 rounded"
+                        className="flex justify-between items-center text-xs bg-yellow-100 p-2 rounded"
                       >
-                        <span className="text-yellow-700 dark:text-yellow-300">
+                        <span className="text-yellow-700">
                           #{ad.position} - {ad.bidAmount} XLM
                         </span>
-                        <span className="text-yellow-600 dark:text-yellow-400 text-[10px]">
+                        <span className="text-yellow-600 text-[10px]">
                           Starts: {formatDateTime(ad.startsAt)}
                         </span>
                       </div>
                     ))}
                     {queueInfo.queueInfo.length > 3 && (
-                      <p className="text-xs text-yellow-600 dark:text-yellow-400 text-center font-mono">
+                      <p className="text-xs text-yellow-600 text-center">
                         +{queueInfo.queueInfo.length - 3} more in queue
                       </p>
                     )}
@@ -580,17 +577,17 @@ function CheckoutPageContent() {
 
         {/* 🎯 ADDED: Credits Display Card */}
         {isStellarConnected && parseFloat(userCredits) > 0 && (
-          <Card className="mb-6 border-green-500 bg-green-50 dark:bg-green-950">
+          <Card className="mb-6 border-green-500 bg-green-50">
             <CardContent className="p-6">
               <div className="text-center">
-                <h3 className="font-mono font-semibold text-green-700 dark:text-green-300 text-sm mb-2">
+                <h3 className="font-semibold text-green-700 text-sm mb-2">
                   🎉 View-to-Earn Credits Available!
                 </h3>
-                <div className="text-2xl font-mono font-bold text-green-600 dark:text-green-400 mb-2">
+                <div className="text-2xl font-bold text-green-600 mb-2">
                   {userCredits} XLM
                 </div>
                 {parseFloat(appliedDiscount) > 0 && (
-                  <div className="space-y-1 text-xs font-mono text-green-700 dark:text-green-300">
+                  <div className="space-y-1 text-xs text-green-700">
                     <div className="flex justify-between items-center px-4">
                       <span>Original Bid:</span>
                       <span className="line-through">{bidAmount} XLM</span>
@@ -599,13 +596,13 @@ function CheckoutPageContent() {
                       <span>Discount:</span>
                       <span className="font-bold">-{appliedDiscount} XLM</span>
                     </div>
-                    <div className="flex justify-between items-center px-4 pt-2 border-t border-green-300 dark:border-green-700">
+                    <div className="flex justify-between items-center px-4 pt-2 border-t border-green-300">
                       <span className="font-bold">You Pay:</span>
                       <span className="font-bold text-lg">{finalBidAmount} XLM</span>
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-green-600 dark:text-green-400 mt-3">
+                <p className="text-xs text-green-600 mt-3">
                   Earned by viewing ads on this site!
                 </p>
               </div>
@@ -614,14 +611,14 @@ function CheckoutPageContent() {
         )}
 
         {paymentInfo && (
-          <Card className="mb-6 border-border bg-card">
+          <Card className="mb-6 border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="text-center">
-                  <h3 className="font-mono font-semibold text-foreground text-sm mb-2">
+                  <h3 className="font-semibold text-gray-900 text-sm mb-2">
                     {isBidding ? 'Bid Amount' : 'Purchase Amount'}
                   </h3>
-                  <p className="text-xs text-muted-foreground font-mono mb-2">
+                  <p className="text-xs text-gray-600">
                     {isBidding 
                       ? 'Higher bids get priority in the queue' 
                       : 'Slot is available for immediate purchase'
@@ -629,8 +626,8 @@ function CheckoutPageContent() {
                   </p>
                   {/* 🎯 ADDED: Discount indicator */}
                   {parseFloat(appliedDiscount) > 0 && (
-                    <div className="bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 rounded p-2 mb-3">
-                      <p className="text-xs text-green-700 dark:text-green-300 font-mono">
+                    <div className="bg-green-100 border border-green-300 rounded p-2 mb-3">
+                      <p className="text-xs text-green-700">
                         💰 {appliedDiscount} XLM discount will be applied!
                       </p>
                     </div>
@@ -638,7 +635,7 @@ function CheckoutPageContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bidAmount" className="text-sm font-mono text-foreground">
+                  <Label htmlFor="bidAmount" className="text-sm font-medium text-gray-900">
                     Amount (XLM)
                   </Label>
                   <div className="relative">
@@ -649,14 +646,14 @@ function CheckoutPageContent() {
                       min={paymentInfo.price}
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
-                      className="font-mono pr-12"
+                      className="pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder={paymentInfo.price}
                     />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground font-mono">
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">
                       XLM
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono">
+                  <p className="text-xs text-gray-500">
                     Minimum: {paymentInfo.price} XLM
                     {isBidding && queueInfo && ` • Suggested: ${queueInfo.minimumBid} XLM`}
                   </p>
@@ -666,33 +663,33 @@ function CheckoutPageContent() {
           </Card>
         )}
 
-        <Card className="mb-6">
+        <Card className="mb-6 border-0 shadow-sm">
           <CardContent className="p-6">
             {!isStellarConnected ? (
               <div className="text-center">
-                <WalletIcon className="w-8 h-8 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4 font-mono text-sm">
+                <WalletIcon className="w-8 h-8 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 mb-4 text-sm">
                   Connect your Freighter wallet to continue
                 </p>
                 <Button 
                   onClick={connectStellar} 
-                  className="font-mono"
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white"
                   disabled={connectionStatus.type === 'loading'}
                 >
                   {connectionStatus.type === 'loading' ? 'Connecting...' : 'Connect Stellar Wallet'}
                 </Button>
-                <p className="text-xs text-muted-foreground mt-4">
-                  Don't have Freighter? <a href="https://www.freighter.app/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Install it here</a>
+                <p className="text-xs text-gray-500 mt-4">
+                  Don't have Freighter? <a href="https://www.freighter.app/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">Install it here</a>
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-secondary border border-border">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex items-center gap-3">
-                    <CheckCircleIcon className="w-4 h-4 text-foreground" />
+                    <CheckCircleIcon className="w-4 h-4 text-green-600" />
                     <div>
-                      <p className="font-mono font-medium text-foreground text-sm">Freighter Connected</p>
-                      <p className="text-xs text-muted-foreground font-mono">
+                      <p className="font-medium text-gray-900 text-sm">Freighter Connected</p>
+                      <p className="text-xs text-gray-600">
                         {formatAddress(stellarAddress)}
                       </p>
                     </div>
@@ -700,10 +697,10 @@ function CheckoutPageContent() {
                 </div>
 
                 {paymentInfo && (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <Button
                       onClick={handleStellarPayment}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-mono h-12"
+                      className="w-full bg-gray-900 hover:bg-gray-800 text-white h-12 font-medium"
                       disabled={connectionStatus.type === 'loading'}
                     >
                       {/* 🎯 UPDATED: Show discount in button */}
@@ -722,7 +719,7 @@ function CheckoutPageContent() {
                     <Button
                       onClick={handleDisconnect}
                       variant="outline"
-                      className="w-full font-mono"
+                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
                     >
                       Disconnect Wallet
                     </Button>
@@ -742,10 +739,10 @@ function CheckoutPageContent() {
 export default function CheckoutPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground font-mono">Loading checkout...</p>
+          <div className="animate-spin h-12 w-12 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading checkout...</p>
         </div>
       </div>
     }>

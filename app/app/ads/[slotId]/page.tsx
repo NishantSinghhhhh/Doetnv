@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Upload, CheckCircle, AlertCircle, Clock, DollarSign, Target, ExternalLink } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, Clock, DollarSign, Target, ExternalLink, ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -95,16 +95,18 @@ export default function AdSlotPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-green-600 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md border-0 shadow-lg">
+          <CardHeader className="text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <CardTitle className="text-green-600 mt-4">
               Ad Submitted Successfully!
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
+          <CardContent className="text-center">
+            <p className="text-gray-600 mb-4">
               Your ad has been submitted and is pending approval. You will be redirected to the dashboard shortly.
             </p>
           </CardContent>
@@ -119,17 +121,18 @@ export default function AdSlotPage() {
         <div className="mb-8">
           <Button 
             onClick={() => router.back()} 
-            variant="outline" 
-            className="mb-4"
+            variant="ghost" 
+            className="mb-4 -ml-2"
           >
-            ← Back
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </Button>
           <h1 className="text-3xl font-bold text-gray-900">Submit Your Ad</h1>
-          <p className="text-gray-600 mt-2">Complete your ad submission for slot: {params.slotId}</p>
+          <p className="text-gray-600 mt-2">Complete your ad submission for slot: <span className="font-mono bg-gray-100 px-2 py-1 rounded text-sm">{params.slotId}</span></p>
         </div>
 
         {error && (
-          <Card className="mb-6 border-red-200 bg-red-50">
+          <Card className="mb-6 border-red-200 bg-red-50 border-0 shadow-sm">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 text-red-600">
                 <AlertCircle className="h-4 w-4" />
@@ -143,31 +146,33 @@ export default function AdSlotPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Slot Summary */}
           <div className="lg:col-span-1">
-            <Card>
+            <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle>Slot Summary</CardTitle>
+                <CardTitle className="text-lg">Slot Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Slot ID</label>
-                  <p className="font-mono text-sm">{params.slotId}</p>
+                  <p className="font-mono text-sm bg-gray-50 px-2 py-1 rounded mt-1">{params.slotId}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Payment Status</label>
-                  <Badge variant="secondary" className="text-xs">
-                    ✅ Paid via x402
-                  </Badge>
+                  <div className="mt-1">
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">
+                      ✅ Paid via x402
+                    </Badge>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Price</label>
-                  <p className="text-sm font-semibold">$0.01 USDC</p>
+                  <p className="text-sm font-semibold mt-1">$0.01 USDC</p>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="border-0 shadow-sm">
               <CardHeader>
                 <CardTitle>Ad Details</CardTitle>
                 <CardDescription>
@@ -177,12 +182,13 @@ export default function AdSlotPage() {
               <CardContent>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   {/* Advertiser Wallet */}
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="advertiserWallet">Advertiser Wallet Address</Label>
                     <Input
                       id="advertiserWallet"
                       placeholder="0x..."
                       {...register('advertiserWallet')}
+                      className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     {errors.advertiserWallet && (
                       <p className="text-red-500 text-sm mt-1">{errors.advertiserWallet.message}</p>
@@ -190,10 +196,10 @@ export default function AdSlotPage() {
                   </div>
 
                   {/* Content Type */}
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="contentType">Content Type</Label>
                     <Select onValueChange={(value) => setValue('contentType', value as 'image' | 'video' | 'text')}>
-                      <SelectTrigger>
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         <SelectValue placeholder="Select content type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -207,24 +213,25 @@ export default function AdSlotPage() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="clickUrl">Click URL</Label>
                     <Input
                       id="clickUrl"
                       type="url"
                       placeholder="https://example.com"
                       {...register('clickUrl')}
+                      className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     {errors.clickUrl && (
                       <p className="text-red-500 text-sm mt-1">{errors.clickUrl.message}</p>
                     )}
                   </div>
 
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <textarea
                       id="description"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       rows={3}
                       placeholder="Describe your advertisement..."
                       {...register('description')}
@@ -235,10 +242,10 @@ export default function AdSlotPage() {
                   </div>
 
                   {/* Duration */}
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="duration">Duration</Label>
                     <Select onValueChange={(value) => setValue('duration', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         <SelectValue placeholder="Select duration" />
                       </SelectTrigger>
                       <SelectContent>
@@ -253,7 +260,7 @@ export default function AdSlotPage() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="price">Price (USDC)</Label>
                     <Input
                       id="price"
@@ -262,6 +269,7 @@ export default function AdSlotPage() {
                       min="0.10"
                       placeholder="0.10"
                       {...register('price')}
+                      className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     {errors.price && (
                       <p className="text-red-500 text-sm mt-1">{errors.price.message}</p>
@@ -271,9 +279,9 @@ export default function AdSlotPage() {
                     </p>
                   </div>
 
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="adFile">Ad File (Optional)</Label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
                       <div className="space-y-1 text-center">
                         <Upload className="mx-auto h-12 w-12 text-gray-400" />
                         <div className="flex text-sm text-gray-600">
@@ -302,7 +310,7 @@ export default function AdSlotPage() {
                   <Button
                     type="submit"
                     disabled={submitting}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg font-medium transition-colors"
                     size="lg"
                   >
                     {submitting ? 'Submitting...' : 'Submit Ad'}
