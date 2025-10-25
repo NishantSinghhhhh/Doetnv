@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       }
     });
     
-    // Return placement with content
+    // Return placement with
     const placementWithContent = await prisma.adPlacement.findUnique({
       where: { id: placement.id },
       include: {

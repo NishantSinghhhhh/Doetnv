@@ -54,7 +54,7 @@ const Greeting = () => {
           <p
             className={
               !getGreetingError
-                ? `text-lg text-center font-medium`
+                ? `text-lg text-center`
                 : `text-lg text-center text-red-500`
             }
           >
@@ -64,10 +64,10 @@ const Greeting = () => {
           </p>
         )}
       </div>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex flex-col space-y-4">
           <input
-            className="border border-gray-300 rounded-lg p-4 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="border p-4 text-center"
             onChange={(e) => setNewGreeting(e.target.value)}
             placeholder="Write a new greeting"
             ref={newGreetingInputRef}
@@ -75,7 +75,7 @@ const Greeting = () => {
             value={newGreeting}
           />
           <button
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition-colors shadow-sm hover:shadow"
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 px-8 rounded-md"
             onClick={setGreeting}
             disabled={
               !address ||
@@ -90,7 +90,7 @@ const Greeting = () => {
           </button>
           {!address && (
             <button
-              className="text-sm text-gray-500 text-center underline hover:opacity-80 transition-opacity"
+              className="text-sm text-gray-500 text-center underline hover:opacity-80"
               onClick={openConnectModal}
             >
               Connect your wallet to set a new greeting

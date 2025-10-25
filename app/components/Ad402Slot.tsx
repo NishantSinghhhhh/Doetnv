@@ -42,7 +42,7 @@ export const Ad402Slot: React.FC<Ad402SlotProps> = ({
       
       // Check if there's an ad for this slot
       console.log(slotId)
-      const response = await fetch(`/api/ads/${slotId}`);
+      const response = await fetch(`/api/ad-slots/${slotId}`);
       let data = await response.json();
       // console.log(data);
       if (response.ok) {
