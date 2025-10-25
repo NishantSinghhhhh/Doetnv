@@ -124,7 +124,7 @@ function UploadPageContent() {
         console.log('Payment data loaded from session storage');
       } else {
         console.warn('No payment data found. Redirecting to home...');
-        setTimeout(() => router.push('/'), 3000);
+        setTimeout(() => router.push('/blog'), 3000);
       }
     }
   }, [router, searchParams]);
@@ -189,7 +189,10 @@ function UploadPageContent() {
     
     // Return the IPFS hash
     return result.submission.fileUpload.hash;
+    
   };
+  // Navigate to /blog after successful storage
+
 
   // Store ad record in database
   const storeAdRecord = async (mediaHash: string): Promise<void> => {

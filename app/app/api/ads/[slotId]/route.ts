@@ -65,6 +65,7 @@ export async function GET(
 
     return NextResponse.json({
       hasAd: true,
+      placementId: placement.id, // 🎯 ADDED - This is critical for view tracking!
       contentUrl: placement.contentUrl,
       clickUrl: placement.clickUrl,
       description: placement.description,

@@ -20,7 +20,7 @@ export async function GET(
     });
 
     if (!adCredit) {
-      console.log('❌ No credits found for wallet');
+      console.log('ℹ️ No credit account found, returning 0 credits');
       return NextResponse.json({
         walletAddress,
         credits: '0',
@@ -30,30 +30,6 @@ export async function GET(
       });
     }
 
-    // Get recent views that earned credits
-    const recentViews = await prisma.adView.findMany({
-      where: {
-        walletAddress,
-        creditsEarned: { gt: 0 }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-      select: {
-        viewDuration: true,
-        creditsEarned: true,
-        earnedAt: true,
-        placement: {
-          select: {
-            slot: {
-              select: {
-                slotIdentifier: true
-              }
-            }
-          }
-        }
-      }
-    });
-
     console.log(`✅ Found ${adCredit.credits.toString()} XLM in credits`);
 
     return NextResponse.json({
@@ -61,23 +37,20 @@ export async function GET(
       credits: adCredit.credits.toString(),
       totalEarned: adCredit.totalEarned.toString(),
       totalSpent: adCredit.totalSpent.toString(),
-      hasCredits: parseFloat(adCredit.credits.toString()) > 0,
-      recentViews: recentViews.map(v => ({
-        duration: v.viewDuration,
-        earned: v.creditsEarned.toString(),
-        earnedAt: v.earnedAt?.toISOString(),
-        slotId: v.placement.slot.slotIdentifier
-      }))
+      hasCredits: parseFloat(adCredit.credits.toString()) > 0
     });
 
   } catch (error) {
     console.error('❌ Error fetching credits:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch credits',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    
+    // Return 0 credits instead of error
+    return NextResponse.json({
+      walletAddress: '',
+      credits: '0',
+      totalEarned: '0',
+      totalSpent: '0',
+      hasCredits: false,
+      error: 'Failed to fetch credits'
+    });
   }
 }

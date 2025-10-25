@@ -192,29 +192,6 @@ export default function BlogDemo() {
               </div>
             </div>
 
-            {/* Call to Action */}
-            <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-3xl p-12 text-center my-16">
-              <h3 className="text-3xl md:text-4xl font-bold mb-4">
-                Ready to revolutionize your advertising?
-              </h3>
-              <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-                Join thousands of publishers and advertisers already using Ad-402
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a 
-                  href="/dashboard" 
-                  className="inline-block bg-white text-gray-900 px-8 py-4 rounded-lg hover:bg-gray-100 transition-all font-semibold text-lg"
-                >
-                  Get Started
-                </a>
-                <a 
-                  href="/example-ads" 
-                  className="inline-block bg-transparent text-white px-8 py-4 rounded-lg border-2 border-white/30 hover:border-white/50 transition-all font-semibold text-lg"
-                >
-                  View Examples
-                </a>
-              </div>
-            </div>
           </div>
 
           {/* Right Sidebar - Fixed */}

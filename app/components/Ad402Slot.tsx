@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner'; // 🎯 ADDED TOAST
+import { toast } from 'sonner';
 
 interface Ad402SlotProps {
   slotId: string;
@@ -36,13 +36,14 @@ export const Ad402Slot: React.FC<Ad402SlotProps> = ({
     isAvailable: boolean;
   } | null>(null);
 
-  // 🎯 VIEW TRACKING STATE
-  const [viewStartTime, setViewStartTime] = useState<number | null>(null);
+  // 🎯 NEW: VIEW TRACKING STATE
   const [isInView, setIsInView] = useState(false);
-  const [totalViewTime, setTotalViewTime] = useState(0);
-  const [hasShownToast, setHasShownToast] = useState(false); // 🎯 ADDED: Prevent duplicate toasts
+  const [cumulativeViewTime, setCumulativeViewTime] = useState(0); // in seconds
+  const [trackingMilestones] = useState([10, 30, 60, 120, 240, 480]); // 10s, 30s, 1m, 2m, 4m, 8m
+  const [nextMilestoneIndex, setNextMilestoneIndex] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   const [sessionId] = useState(() => {
-    // Generate or get session ID from localStorage
     if (typeof window !== 'undefined') {
       let sid = localStorage.getItem('ad_session_id');
       if (!sid) {
@@ -66,15 +67,15 @@ export const Ad402Slot: React.FC<Ad402SlotProps> = ({
         const data = await response.json();
         console.log('📦 Ad data:', data);
         
-        if (data.hasAd && data.contentUrl) {
+        if (data.hasAd && data.contentUrl && data.placementId) {
           setAdContent(data.contentUrl);
-          setAdPlacementId(data.placementId || null);
+          setAdPlacementId(data.placementId);
           setHasAd(true);
+          console.log('✅ Ad ready for tracking. PlacementId:', data.placementId);
         } else {
           setHasAd(false);
         }
       } else {
-        console.log('❌ No ad found for slot:', slotId);
         setHasAd(false);
       }
     } catch (error) {
@@ -98,121 +99,150 @@ export const Ad402Slot: React.FC<Ad402SlotProps> = ({
     }
   };
 
-  // 🎯 INTERSECTION OBSERVER for view tracking
+  // 🎯 CLIENT-SIDE QUEUE CHECKER (runs when ads are viewed)
+useEffect(() => {
+  if (!hasAd || !adPlacementId) return;
+
+  // Check every 30 seconds if queue needs processing
+  const queueChecker = setInterval(async () => {
+    try {
+      console.log('🔍 Checking if queue needs processing...');
+      
+      const response = await fetch('/api/process-queue', {
+        method: 'POST'
+      });
+      
+      const data = await response.json();
+      
+      if (data.activatedCount > 0) {
+        console.log('🎉 Queue processed! Refreshing ad...');
+        // Refresh the ad content
+        fetchAdContent();
+      }
+    } catch (error) {
+      console.error('❌ Queue check failed:', error);
+    }
+  }, 30000); // Check every 30 seconds
+
+  return () => clearInterval(queueChecker);
+}, [hasAd, adPlacementId]);
+
+  // 🎯 NEW: Reusable function to track the view
+  const trackView = async (viewDuration: number) => {
+    const walletAddress = typeof window !== 'undefined' 
+      ? localStorage.getItem('stellar_wallet_address') 
+      : null;
+
+    console.log('📤 Sending tracking request:', {
+      placementId: adPlacementId,
+      sessionId,
+      viewDuration: viewDuration,
+      slotId,
+      walletAddress: walletAddress ? 'Connected' : 'Not connected'
+    });
+
+    try {
+      const response = await fetch('/api/track-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          placementId: adPlacementId,
+          sessionId: sessionId,
+          viewDuration: viewDuration, // Send the milestone duration
+          slotId: slotId,
+          walletAddress: walletAddress
+        })
+      });
+
+      const data = await response.json();
+      console.log('✅ Tracking response:', data);
+
+      if (data.creditsEarned && data.creditsEarned > 0) {
+        toast.success('🎉 Credits Earned!', {
+          description: `+${data.creditsEarned} XLM for ${viewDuration}s viewing!`,
+          duration: 4000,
+        });
+      } else {
+        toast.info('👁️ View Tracked', {
+          description: 'Connect wallet to earn credits!',
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to track view:', error);
+    }
+  };
+
+  // 🎯 INTERSECTION OBSERVER
   useEffect(() => {
     if (!slotRef.current || !hasAd || !adPlacementId) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Ad entered viewport
-            setIsInView(true);
-            setViewStartTime(Date.now());
-            console.log('👁️ Ad entered view:', slotId);
-          } else {
-            // Ad left viewport
-            if (viewStartTime) {
-              const duration = Math.floor((Date.now() - viewStartTime) / 1000);
-              setTotalViewTime(prev => prev + duration);
-              console.log(`👁️ Ad left view. Duration: ${duration}s, Total: ${totalViewTime + duration}s`);
-            }
-            setIsInView(false);
-            setViewStartTime(null);
-          }
-        });
+        const entry = entries[0];
+        setIsInView(entry.isIntersecting);
+        
+        if (entry.isIntersecting) {
+          console.log('👁️ Ad entered view:', slotId);
+        } else {
+          console.log('👋 Ad left view:', slotId);
+        }
       },
-      {
-        threshold: 0.5 // At least 50% visible
-      }
+      { threshold: 0.5 }
     );
 
     observer.observe(slotRef.current);
 
-    return () => {
-      observer.disconnect();
-    };
-  }, [hasAd, adPlacementId, slotId, viewStartTime, totalViewTime]);
+    return () => observer.disconnect();
+  }, [hasAd, adPlacementId, slotId]); // Removed hasTracked
 
-  // 🎯 TRACK VIEW TIME and send to API
+  // 🎯 NEW: 1-SECOND CUMULATIVE TIMER
   useEffect(() => {
-    if (!hasAd || !adPlacementId) return;
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-    // Send view tracking every 10 seconds while in view
-    const interval = setInterval(() => {
-      if (isInView && viewStartTime) {
-        const currentDuration = Math.floor((Date.now() - viewStartTime) / 1000);
-        const totalDuration = totalViewTime + currentDuration;
-        
-        if (totalDuration >= 10) { // Only track views >= 10 seconds
-          console.log(`📊 Tracking view: ${totalDuration}s for placement ${adPlacementId}`);
-          
-          // 🎯 GET WALLET ADDRESS FROM LOCALSTORAGE
-          const walletAddress = typeof window !== 'undefined' 
-            ? localStorage.getItem('stellar_wallet_address') 
-            : null;
-          
-          fetch('/api/track-view', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              placementId: adPlacementId,
-              sessionId: sessionId,
-              viewDuration: totalDuration,
-              slotId: slotId,
-              walletAddress: walletAddress // 🎯 SEND WALLET ADDRESS
-            })
-          })
-          .then(res => res.json())
-          .then(data => {
-            // 🎉 SHOW TOAST IF CREDITS EARNED (only once per session per ad)
-            if (data.creditsEarned > 0 && !hasShownToast) {
-              toast.success('🎉 Credits Earned!', {
-                description: `+${data.creditsEarned} XLM for viewing this ad!`,
-                duration: 3000,
-              });
-              setHasShownToast(true);
-            }
-          })
-          .catch(err => console.error('Failed to track view:', err));
-        }
-      }
-    }, 10000); // Check every 10 seconds
+    // Start timer only if: ad is in view and there are milestones left
+    if (isInView && nextMilestoneIndex < trackingMilestones.length) {
+      console.log('⏱️ Starting 1-second interval timer for:', slotId);
+      
+      intervalRef.current = setInterval(() => {
+        setCumulativeViewTime(prevTime => prevTime + 1);
+      }, 1000); // Ticks every second
+    }
 
-    return () => clearInterval(interval);
-  }, [hasAd, adPlacementId, isInView, viewStartTime, totalViewTime, sessionId, slotId, hasShownToast]);
-
-  // 🎯 SEND FINAL VIEW TIME on unmount
-  useEffect(() => {
+    // Cleanup
     return () => {
-      if (adPlacementId && totalViewTime > 0) {
-        const finalDuration = viewStartTime 
-          ? totalViewTime + Math.floor((Date.now() - viewStartTime) / 1000)
-          : totalViewTime;
-        
-        if (finalDuration >= 10) {
-          console.log(`📊 Final view time: ${finalDuration}s`);
-          
-          // 🎯 GET WALLET ADDRESS
-          const walletAddress = typeof window !== 'undefined' 
-            ? localStorage.getItem('stellar_wallet_address') 
-            : null;
-          
-          // Use sendBeacon for reliable sending on page unload
-          if (navigator.sendBeacon) {
-            const blob = new Blob([JSON.stringify({
-              placementId: adPlacementId,
-              sessionId: sessionId,
-              viewDuration: finalDuration,
-              slotId: slotId,
-              walletAddress: walletAddress // 🎯 SEND WALLET ADDRESS
-            })], { type: 'application/json' });
-            navigator.sendBeacon('/api/track-view', blob);
-          }
-        }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [adPlacementId, totalViewTime, viewStartTime, sessionId, slotId]);
+  }, [isInView, nextMilestoneIndex, trackingMilestones.length]);
+
+  // 🎯 NEW: MILESTONE CHECKER
+  useEffect(() => {
+    // Check if we have an ad to track and if we have a valid milestone
+    if (!adPlacementId || nextMilestoneIndex >= trackingMilestones.length) {
+      return;
+    }
+
+    const currentMilestone = trackingMilestones[nextMilestoneIndex];
+
+    // If cumulative time reaches or exceeds the current milestone, track it
+    if (cumulativeViewTime >= currentMilestone) {
+      console.log(`✅ Milestone ${currentMilestone}s reached! Tracking view...`);
+      
+      // Call the tracking function
+      trackView(currentMilestone);
+      
+      // Move to the next milestone
+      setNextMilestoneIndex(prevIndex => prevIndex + 1);
+    }
+  }, [cumulativeViewTime, nextMilestoneIndex, trackingMilestones, adPlacementId, sessionId, slotId]);
+
 
   useEffect(() => {
     if (slotRef.current) {

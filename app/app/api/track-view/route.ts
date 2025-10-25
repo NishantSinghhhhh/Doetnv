@@ -6,133 +6,117 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { placementId, sessionId, viewDuration, slotId, walletAddress } = body;
 
-    console.log('📊 View tracking request:', { placementId, sessionId, viewDuration, walletAddress });
+    console.log('📊 View tracking request:', {
+      placementId,
+      sessionId,
+      viewDuration,
+      slotId,
+      walletAddress: walletAddress || 'anonymous'
+    });
 
     if (!placementId || !sessionId || !viewDuration) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields' },
+        { status: 400 }
+      );
     }
 
-    // Calculate credits earned based on view duration
-    let creditsEarned = 0;
-    if (viewDuration >= 60) {
-      creditsEarned = 0.10; // 1 minute = 0.10 XLM
-    } else if (viewDuration >= 30) {
-      creditsEarned = 0.05; // 30 seconds = 0.05 XLM
-    } else if (viewDuration >= 10) {
-      creditsEarned = 0.01; // 10 seconds = 0.01 XLM
-    }
-
-    console.log(`💰 Credits earned: ${creditsEarned} XLM for ${viewDuration}s view`);
-
-    // Check if this session already tracked this ad
+    // Check if this view was already tracked
     const existingView = await prisma.adView.findFirst({
       where: {
-        placementId,
-        sessionId
+        placementId: placementId,
+        sessionId: sessionId
       }
     });
 
     if (existingView) {
-      // Update existing view if duration increased
-      if (viewDuration > existingView.viewDuration) {
-        await prisma.adView.update({
-          where: { id: existingView.id },
-          data: {
-            viewDuration,
-            creditsEarned: creditsEarned > existingView.creditsEarned.toNumber() 
-              ? creditsEarned 
-              : existingView.creditsEarned.toNumber(),
-            earnedAt: creditsEarned > 0 && !existingView.earnedAt ? new Date() : existingView.earnedAt,
-            walletAddress: walletAddress || existingView.walletAddress
-          }
-        });
-
-        console.log('✅ Updated existing view');
-      }
-    } else {
-      // Create new view record
-      await prisma.adView.create({
-        data: {
-          placementId,
-          sessionId,
-          viewDuration,
-          creditsEarned,
-          earnedAt: creditsEarned > 0 ? new Date() : null,
-          walletAddress: walletAddress || null,
-          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
-          userAgent: request.headers.get('user-agent') || null
-        }
-      });
-
-      console.log('✅ Created new view record');
-
-      // Increment view count on placement
-      await prisma.adPlacement.update({
-        where: { id: placementId },
-        data: {
-          viewCount: { increment: 1 }
-        }
+      console.log('⚠️ View already tracked for this session');
+      return NextResponse.json({
+        success: true,
+        viewDuration: existingView.viewDuration,
+        creditsEarned: parseFloat(existingView.creditsEarned.toString()),
+        message: 'View already tracked'
       });
     }
 
-    // If wallet is connected and credits were earned, update AdCredit
-    if (walletAddress && creditsEarned > 0) {
+    // Calculate credits: 0.05 XLM for 30+ seconds
+    const creditsEarned = viewDuration >= 30 ? 0.05 : 0.01;
+
+    // 🎯 CREATE VIEW RECORD (with or without wallet)
+    const adView = await prisma.adView.create({
+      data: {
+        placementId: placementId,
+        sessionId: sessionId,
+        walletAddress: walletAddress || null,
+        viewDuration: viewDuration,
+        creditsEarned: creditsEarned,
+        claimed: walletAddress ? true : false, // Mark as claimed if wallet connected
+      }
+    });
+
+    console.log('✅ View record created:', adView.id);
+
+    // 🎯 IF WALLET CONNECTED: Add credits immediately
+    if (walletAddress) {
+      console.log('💰 Wallet connected, adding credits to:', walletAddress);
+      
       const existingCredit = await prisma.adCredit.findUnique({
-        where: { walletAddress }
+        where: { walletAddress: walletAddress }
       });
 
       if (existingCredit) {
-        // Add credits to existing account
         await prisma.adCredit.update({
-          where: { walletAddress },
+          where: { walletAddress: walletAddress },
           data: {
             credits: { increment: creditsEarned },
             totalEarned: { increment: creditsEarned }
           }
         });
-        console.log(`✅ Added ${creditsEarned} XLM to wallet ${walletAddress}`);
+        console.log(`✅ Added ${creditsEarned} XLM to existing account`);
       } else {
-        // Create new credit account
         await prisma.adCredit.create({
           data: {
-            walletAddress,
+            walletAddress: walletAddress,
             credits: creditsEarned,
             totalEarned: creditsEarned,
             totalSpent: 0
           }
         });
-        console.log(`✅ Created credit account for ${walletAddress} with ${creditsEarned} XLM`);
+        console.log(`✅ Created new credit account with ${creditsEarned} XLM`);
       }
+    } else {
+      // 🎯 NO WALLET: Credits stored in session (pending)
+      console.log('💾 No wallet connected, credits stored as pending for session:', sessionId);
     }
+
+    // Increment view count on placement
+    await prisma.adPlacement.update({
+      where: { id: placementId },
+      data: { viewCount: { increment: 1 } }
+    });
 
     return NextResponse.json({
       success: true,
-      viewDuration,
-      creditsEarned,
-      message: creditsEarned > 0 
+      viewDuration: viewDuration,
+      creditsEarned: creditsEarned,
+      claimed: walletAddress ? true : false,
+      message: walletAddress 
         ? `🎉 Earned ${creditsEarned} XLM for watching ad!`
-        : `👁️ View tracked (${viewDuration}s)`
+        : `💾 Earned ${creditsEarned} XLM! Connect wallet at checkout to claim.`
     });
 
   } catch (error) {
     console.error('❌ Error tracking view:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to track view',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
-export async function OPTIONS(request: NextRequest) {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Method not allowed. Use POST to track views.' },
+    { status: 405 }
+  );
 }
