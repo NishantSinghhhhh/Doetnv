@@ -189,7 +189,10 @@ function UploadPageContent() {
     
     // Return the IPFS hash
     return result.submission.fileUpload.hash;
+    
   };
+  // Navigate to /blog after successful storage
+
 
   // Store ad record in database
   const storeAdRecord = async (mediaHash: string): Promise<void> => {
@@ -219,7 +222,7 @@ function UploadPageContent() {
 
     return response.json();
   };
-
+  
   // Handle complete upload process
   const handleUpload = async () => {
     if (!selectedFile || !paymentData) return;

@@ -102,7 +102,7 @@ export default function BlogDemo() {
           {/* Right Sidebar */}
           <aside className="fixed right-8 top-1/2 transform -translate-y-1/2 hidden lg:block">
             <Ad402Slot
-              slotId="sidebar"
+              slotId="sidebar-right"
               size="sidebar"
               price="0.20"
               durations={['1h', '6h', '24h']}
