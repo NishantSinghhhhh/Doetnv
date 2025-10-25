@@ -1,5 +1,5 @@
 /**
- * Ad-402 SDK - Decentralized Advertising Platform
+ * SwiftAd SDK - Decentralized Advertising Platform
  * Version: 1.0.0
  */
 

@@ -213,33 +213,33 @@ function UploadPageContent() {
     });
 
     if (!response.ok) {
-      const errorResult = await response.json();
-      throw new Error(errorResult.error || 'Failed to store ad record');
+      throw new Error('Failed to store ad record');
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('Ad record stored:', result);
   };
 
-  // Handle complete upload process
+  // Main upload handler
   const handleUpload = async () => {
-    if (!selectedFile || !paymentData) return;
+    if (!selectedFile || !paymentData || !paymentInfo) return;
 
     try {
-      setUploadStatus({ type: 'uploading', message: 'Uploading your ad to IPFS...', progress: 25 });
+      setUploadStatus({ type: 'uploading', message: 'Uploading to IPFS...', progress: 30 });
 
-      // Upload via backend (which handles Lighthouse)
-      const mediaHash = await uploadViaBackend(selectedFile);
-      setLighthouseHash(mediaHash);
-      
-      setUploadStatus({ type: 'uploading', message: 'Processing your ad...', progress: 60 });
+      const hash = await uploadViaBackend(selectedFile);
+      setLighthouseHash(hash);
 
-      // Store in database
-      setUploadStatus({ type: 'storing', message: 'Finalizing...', progress: 80 });
-      await storeAdRecord(mediaHash);
+      setUploadStatus({ type: 'storing', message: 'Storing ad record...', progress: 70 });
+
+      await storeAdRecord(hash);
 
       setUploadStatus({ type: 'success', message: 'Ad uploaded successfully!', progress: 100 });
 
-      // Clean up session storage
+      setTimeout(() => {
+        router.push('/');
+      }, 3000);
+
       sessionStorage.removeItem('paymentData');
       sessionStorage.removeItem('paymentInfo');
 
@@ -270,102 +270,103 @@ function UploadPageContent() {
     if (uploadStatus.type === 'idle') return null;
 
     const statusConfig = {
-      uploading: { icon: CloudUploadIcon, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200' },
-      storing: { icon: CloudUploadIcon, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200' },
-      success: { icon: CheckCircleIcon, color: 'text-green-500', bg: 'bg-green-50', border: 'border-green-200' },
-      error: { icon: ExclamationTriangleIcon, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-200' }
+      uploading: { icon: CloudUploadIcon, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+      storing: { icon: CloudUploadIcon, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+      success: { icon: CheckCircleIcon, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+      error: { icon: ExclamationTriangleIcon, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' }
     };
 
     const config = statusConfig[uploadStatus.type];
     const Icon = config.icon;
 
     return (
-      <Card className={`border ${config.border} ${config.bg}`}>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Icon className={`w-5 h-5 ${config.color}`} />
-            <p className="text-sm font-mono font-medium">{uploadStatus.message}</p>
+      <div className={`rounded-2xl border-2 ${config.border} ${config.bg} p-6`}>
+        <div className="flex items-center gap-3 mb-3">
+          <Icon className={`w-6 h-6 ${config.color}`} />
+          <p className="text-sm font-semibold text-gray-900">{uploadStatus.message}</p>
+        </div>
+        {uploadStatus.progress !== undefined && (
+          <Progress value={uploadStatus.progress} className="h-2" />
+        )}
+        {uploadStatus.type === 'success' && lighthouseHash && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs font-semibold text-gray-700">IPFS Hash:</p>
+            <p className="text-xs break-all text-gray-600 bg-white px-3 py-2 rounded-lg border border-gray-200">{lighthouseHash}</p>
+            <a
+              href={`https://gateway.lighthouse.storage/ipfs/${lighthouseHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-1"
+            >
+              View on IPFS Gateway →
+            </a>
           </div>
-          {uploadStatus.progress !== undefined && (
-            <Progress value={uploadStatus.progress} className="h-2" />
-          )}
-          {uploadStatus.type === 'success' && lighthouseHash && (
-            <div className="mt-4 space-y-2">
-              <p className="text-xs font-mono text-muted-foreground">IPFS Hash:</p>
-              <p className="text-xs font-mono break-all text-foreground">{lighthouseHash}</p>
-              <a
-                href={`https://gateway.lighthouse.storage/ipfs/${lighthouseHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:text-blue-800 font-mono"
-              >
-                View on IPFS Gateway →
-              </a>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
+    <div className="min-h-screen bg-white py-12 px-4">
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
+        <div className="mb-10">
           <Button
             onClick={() => router.back()}
             variant="ghost"
-            className="mb-4 font-mono text-sm"
+            className="mb-6 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg"
           >
             <ArrowLeftIcon className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold font-mono text-foreground mb-2">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3 tracking-tight">
             Upload Your Ad
           </h1>
-          <p className="text-muted-foreground font-mono text-sm">
+          <p className="text-lg text-gray-600">
             Upload your advertisement image to IPFS
           </p>
         </div>
 
         {paymentInfo && paymentData && (
-          <Card className="mb-6 border-border bg-card">
-            <CardHeader>
-              <CardTitle className="font-mono text-lg">Payment Confirmed</CardTitle>
-              <CardDescription className="font-mono">
-                Your payment has been processed. Upload your ad to complete.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm font-mono">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Slot:</span>
-                  <span className="text-foreground">{paymentInfo.slotId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Size:</span>
-                  <Badge variant="outline">{paymentInfo.size}</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount:</span>
-                  <span className="text-foreground">{paymentData.AmountPaid} XLM</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">TX Hash:</span>
-                  <span className="text-foreground text-xs">{paymentData.txHash.slice(0, 16)}...</span>
-                </div>
+          <div className="mb-8 bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                <CheckCircleIcon className="w-5 h-5 text-green-600" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Payment Confirmed</h3>
+                <p className="text-sm text-gray-600">
+                  Your payment has been processed. Upload your ad to complete.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3 pt-4 border-t border-gray-100">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Slot</span>
+                <span className="text-sm font-semibold text-gray-900">{paymentInfo.slotId}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Size</span>
+                <Badge variant="outline" className="rounded-lg">{paymentInfo.size}</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Amount</span>
+                <span className="text-sm font-semibold text-gray-900">{paymentData.AmountPaid} XLM</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">TX Hash</span>
+                <span className="text-xs font-mono text-gray-700 bg-gray-50 px-2 py-1 rounded">{paymentData.txHash.slice(0, 16)}...</span>
+              </div>
+            </div>
+          </div>
         )}
 
-        <Card className="mb-6">
-          <CardContent className="p-6">
+        <div className="mb-6 bg-white rounded-2xl border-2 border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-8">
             {!selectedFile ? (
               <div
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                className="border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer p-8 text-center"
+                className="border-2 border-dashed border-gray-200 hover:border-gray-300 transition-all cursor-pointer p-12 text-center rounded-xl bg-gray-50/50"
               >
                 <input
                   type="file"
@@ -375,32 +376,34 @@ function UploadPageContent() {
                   id="file-upload"
                 />
                 <label htmlFor="file-upload" className="cursor-pointer">
-                  <CloudUploadIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground font-mono text-sm mb-2">
+                  <CloudUploadIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-700 text-base font-semibold mb-2">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-muted-foreground font-mono text-xs">
+                  <p className="text-gray-500 text-sm">
                     Image files only (max 5MB)
                   </p>
                 </label>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {previewUrl && (
-                  <div className="relative">
+                  <div className="relative rounded-xl overflow-hidden border-2 border-gray-100">
                     <img
                       src={previewUrl}
                       alt="Preview"
-                      className="w-full h-64 object-cover border border-border"
+                      className="w-full h-64 object-cover"
                     />
                   </div>
                 )}
-                <div className="flex items-center justify-between p-4 bg-secondary border border-border">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border-2 border-gray-100">
                   <div className="flex items-center gap-3">
-                    <ImageIcon className="w-5 h-5 text-foreground" />
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                      <ImageIcon className="w-5 h-5 text-gray-700" />
+                    </div>
                     <div>
-                      <p className="font-mono text-sm text-foreground">{selectedFile.name}</p>
-                      <p className="font-mono text-xs text-muted-foreground">
+                      <p className="text-sm font-semibold text-gray-900">{selectedFile.name}</p>
+                      <p className="text-xs text-gray-600">
                         {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
@@ -413,7 +416,7 @@ function UploadPageContent() {
                     }}
                     variant="outline"
                     size="sm"
-                    className="font-mono"
+                    className="rounded-lg border-gray-200 hover:bg-gray-50"
                   >
                     Remove
                   </Button>
@@ -421,7 +424,7 @@ function UploadPageContent() {
                 <Button
                   onClick={handleUpload}
                   disabled={uploadStatus.type === 'uploading' || uploadStatus.type === 'storing' || !paymentData}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-mono h-12"
+                  className="w-full bg-black hover:bg-gray-800 text-white font-semibold h-12 rounded-lg text-base shadow-sm"
                 >
                   {uploadStatus.type === 'uploading' || uploadStatus.type === 'storing'
                     ? 'Uploading...'
@@ -429,8 +432,8 @@ function UploadPageContent() {
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {renderUploadStatus()}
       </div>
@@ -441,10 +444,10 @@ function UploadPageContent() {
 export default function UploadPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground font-mono">Loading upload page...</p>
+          <div className="animate-spin h-12 w-12 border-2 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading upload page...</p>
         </div>
       </div>
     }>

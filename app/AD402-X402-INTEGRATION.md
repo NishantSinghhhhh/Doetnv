@@ -1,6 +1,6 @@
 # Ad402 x402 Integration
 
-This document explains how the Ad402 platform integrates with x402 for payment processing in the ad bidding flow.
+This document explains how the SwiftAd Platform integrates with x402 for payment processing in the ad bidding flow.
 
 ## Overview
 

@@ -1,4 +1,4 @@
-# Ad-402: Decentralized Advertising Platform
+# SwiftAd: Decentralized Advertising Platform
 
 A complete full-stack decentralized advertising platform where publishers can monetize their websites instantly using x402 payments, and advertisers can place ads directly without intermediaries.
 
@@ -326,4 +326,4 @@ For support and questions:
 
 ---
 
-Built with ❤️ by the Ad-402 team
+Built with ❤️ by the SwiftAd team

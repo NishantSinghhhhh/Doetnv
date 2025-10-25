@@ -133,7 +133,7 @@ export default function PublisherDashboard() {
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-mono font-bold text-foreground">Ad-402 Publisher Dashboard</h1>
+          <h1 className="text-3xl font-mono font-bold text-foreground">SwiftAd Publisher Dashboard</h1>
           <p className="text-muted-foreground mt-2 font-mono">Manage your ad slots and track performance</p>
         </div>
         

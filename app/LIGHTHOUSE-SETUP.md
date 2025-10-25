@@ -1,6 +1,6 @@
 # Lighthouse Storage Setup Guide
 
-This guide explains how to set up Lighthouse storage for file uploads in the Ad402 platform.
+This guide explains how to set up Lighthouse storage for file uploads in the SwiftAd Platform.
 
 ## Prerequisites
 

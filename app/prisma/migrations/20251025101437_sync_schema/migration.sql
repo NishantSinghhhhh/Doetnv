@@ -1,14 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the column `lighthouse_url` on the `ad_content` table. All the data in the column will be lost.
-  - The `content_type` column on the `ad_placements` table would be dropped and recreated. This will lead to data loss if there is data in the column.
-  - The `status` column on the `ad_placements` table would be dropped and recreated. This will lead to data loss if there is data in the column.
-  - The `moderation_status` column on the `ad_placements` table would be dropped and recreated. This will lead to data loss if there is data in the column.
-  - Made the column `file_path` on table `ad_content` required. This step will fail if there are existing NULL values in that column.
-
-*/
--- CreateEnum
 CREATE TYPE "AdStatus" AS ENUM ('pending', 'active', 'queued', 'completed', 'rejected', 'expired');
 
 -- CreateEnum
@@ -32,16 +21,12 @@ ADD COLUMN     "status" "AdStatus" NOT NULL DEFAULT 'pending',
 DROP COLUMN "moderation_status",
 ADD COLUMN     "moderation_status" "ModerationStatus" NOT NULL DEFAULT 'pending';
 
--- AlterTable
 ALTER TABLE "ad_slots" ALTER COLUMN "currency" SET DEFAULT 'XLM',
 ALTER COLUMN "network" SET DEFAULT 'stellar';
 
--- AlterTable
 ALTER TABLE "payments" ALTER COLUMN "currency" SET DEFAULT 'XLM',
 ALTER COLUMN "network" SET DEFAULT 'stellar';
 
--- CreateIndex
 CREATE INDEX "ad_placements_slot_id_status_expires_at_idx" ON "ad_placements"("slot_id", "status", "expires_at");
 
--- CreateIndex
 CREATE INDEX "ad_placements_slot_id_status_bid_amount_idx" ON "ad_placements"("slot_id", "status", "bid_amount");

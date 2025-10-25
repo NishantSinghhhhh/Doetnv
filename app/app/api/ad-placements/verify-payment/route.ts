@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
 async function verifyPaymentSignature(transactionHash: string, signature: string, address: string): Promise<boolean> {
   try {
-    const message = `Payment for Ad-402: ${transactionHash}`;
+    const message = `Payment for SwiftAd: ${transactionHash}`;
     const recoveredAddress = ethers.verifyMessage(message, signature);
     return recoveredAddress.toLowerCase() === address.toLowerCase();
   } catch (error) {

@@ -64,7 +64,7 @@ export default function WalletConnectModal({ isOpen, onClose, onConnect, onDisco
             </Button>
           </div>
           <CardDescription>
-            Connect your wallet to interact with the Ad402 platform
+            Connect your wallet to interact with the SwiftAd Platform
           </CardDescription>
         </CardHeader>
         <CardContent>

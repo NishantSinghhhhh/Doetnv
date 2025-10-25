@@ -1,4 +1,4 @@
-# Deployment Guide for Ad402 Platform
+# Deployment Guide for SwiftAd Platform
 
 ## 🚀 Vercel Deployment Setup
 
