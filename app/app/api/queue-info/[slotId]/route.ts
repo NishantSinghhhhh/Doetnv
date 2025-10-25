@@ -8,9 +8,9 @@ export async function GET(
   try {
     const { slotId } = await params;
     
-    console.log('🔍 Fetching queue info for slot:', slotId);
+    console.log('🔍 Fetching queue info for:', slotId);
 
-    // Find the ad slot
+    // Find ad slot
     const adSlot = await prisma.adSlot.findFirst({
       where: {
         slotIdentifier: slotId,
@@ -19,53 +19,89 @@ export async function GET(
     });
 
     if (!adSlot) {
-      console.log('❌ Ad slot not found:', slotId);
       return NextResponse.json({
         slotId,
         position: 0,
         totalInQueue: 0,
-        isAvailable: true
+        isAvailable: true,
+        minimumBid: '0.25'
       });
     }
 
-    // Check if there's an active ad
+    // Get active placement
     const activePlacement = await prisma.adPlacement.findFirst({
       where: {
         slotId: adSlot.id,
         status: 'active',
-        expiresAt: {
-          gt: new Date()
-        }
+        expiresAt: { gt: new Date() }
       }
     });
 
-    // Count queued ads
-    const queuedCount = await prisma.adPlacement.count({
+    // Get queue (sorted by queue position)
+    const queuedPlacements = await prisma.adPlacement.findMany({
       where: {
         slotId: adSlot.id,
         status: 'queued'
+      },
+      orderBy: [
+        { queuePosition: 'asc' }
+      ],
+      select: {
+        id: true,
+        bidAmount: true,
+        queuePosition: true,
+        startsAt: true,
+        expiresAt: true
       }
     });
 
+    const totalInQueue = queuedPlacements.length;
+
+    // Calculate minimum bid to get into queue
+    const highestQueueBid = queuedPlacements.length > 0 
+      ? Math.max(...queuedPlacements.map(p => parseFloat(p.bidAmount?.toString() || '0')))
+      : parseFloat(adSlot.basePrice.toString());
+
+    const minimumBid = (highestQueueBid + 0.01).toFixed(2); // Need to bid higher than highest
+
     // If no active ad, slot is available
     if (!activePlacement) {
-      console.log('✅ Slot is available (no active ad)');
       return NextResponse.json({
         slotId,
         position: 0,
-        totalInQueue: queuedCount,
-        isAvailable: true
+        totalInQueue: totalInQueue,
+        isAvailable: true,
+        minimumBid: adSlot.basePrice.toString(),
+        queueInfo: queuedPlacements.map((p, i) => ({
+          position: i + 1,
+          bidAmount: p.bidAmount?.toString(),
+          startsAt: p.startsAt.toISOString()
+        }))
       });
     }
 
     // Slot is occupied
-    console.log(`📊 Slot occupied, ${queuedCount} in queue`);
+    console.log(`📊 Active ad expires: ${activePlacement.expiresAt}`);
+    console.log(`📊 ${totalInQueue} ads in queue`);
+    console.log(`💰 Minimum bid to compete: ${minimumBid}`);
+
     return NextResponse.json({
       slotId,
-      position: queuedCount, // Next position in queue
-      totalInQueue: queuedCount,
+      position: totalInQueue, // Next position
+      totalInQueue: totalInQueue,
       nextActivation: activePlacement.expiresAt.toISOString(),
-      isAvailable: false
+      isAvailable: false,
+      minimumBid: minimumBid,
+      currentAd: {
+        expiresAt: activePlacement.expiresAt.toISOString(),
+        timeRemaining: Math.max(0, activePlacement.expiresAt.getTime() - Date.now())
+      },
+      queueInfo: queuedPlacements.map((p, i) => ({
+        position: i + 1,
+        bidAmount: p.bidAmount?.toString(),
+        startsAt: p.startsAt.toISOString(),
+        expiresAt: p.expiresAt.toISOString()
+      }))
     });
 
   } catch (error) {
@@ -73,7 +109,7 @@ export async function GET(
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown'
       },
       { status: 500 }
     );

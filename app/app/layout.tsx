@@ -7,6 +7,7 @@ import { Providers } from "@/components/Providers";
 import { Header } from "@/components/Header";
 import { ToastContainer } from "react-toastify";
 import { cn } from "@/lib/utils";
+import { Toaster } from 'sonner'
 
 const fontMono = FontMono({
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default function RootLayout({
           <Header />
           <main>
             {children}
+            <Toaster position="top-right" richColors />
           </main>
         </Providers>
         <ToastContainer />

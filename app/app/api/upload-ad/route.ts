@@ -46,32 +46,17 @@ export async function POST(request: NextRequest) {
     const startsAt = new Date();
     const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
 
+    // Get bid amount (from bidAmount or fallback to AmountPaid)
+    const bidAmount = paymentData.bidAmount || paymentData.AmountPaid;
+    const discountApplied = paymentData.discountApplied || '0';
+
     console.log('⏰ Duration calculated:', durationMinutes, 'minutes');
-    console.log('📅 Starts at:', startsAt.toISOString());
-    console.log('📅 Expires at:', expiresAt.toISOString());
+    console.log('💰 Bid amount:', bidAmount, 'XLM');
+    console.log('💰 Discount applied:', discountApplied, 'XLM');
+    console.log('📅 Initial starts at:', startsAt.toISOString());
+    console.log('📅 Initial expires at:', expiresAt.toISOString());
 
-    // Create ad placement record
-    const placementRecord = {
-      slotId,
-      advertiserAddress: paymentData.payerAddress,
-      mediaHash,
-      contentUrl: `https://gateway.lighthouse.storage/ipfs/${mediaHash}`,
-      amountPaid: paymentData.AmountPaid,
-      bidAmount: paymentData.bidAmount || paymentData.AmountPaid,
-      transactionHash: paymentData.txHash,
-      duration: durationMinutes,
-      createdAt: new Date().toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      status: 'active',
-      category: paymentInfo.category || 'general',
-      size: paymentInfo.size
-    };
-
-    // Generate placement hash (mock IPFS hash for now)
-    const placementHash = `Qm${Math.random().toString(36).substring(2, 15)}${Date.now()}`;
-
-    console.log('🎫 Placement hash generated:', placementHash);
-    console.log('📋 Full placement record:', JSON.stringify(placementRecord, null, 2));
+    const contentUrl = `https://gateway.lighthouse.storage/ipfs/${mediaHash}`;
 
     // 🚀 SAVE TO DATABASE WITH PRISMA
     try {
@@ -105,18 +90,8 @@ export async function POST(request: NextRequest) {
           console.log('✅ Publisher found!');
           console.log('   ID:', publisher.id);
           console.log('   Wallet:', publisher.walletAddress);
-          console.log('   Verified:', publisher.verified);
         } else {
           console.log('❌ Publisher not found, creating new one...');
-        }
-      } catch (findError) {
-        console.error('❌ Error finding publisher:', findError);
-        throw findError;
-      }
-
-      if (!publisher) {
-        try {
-          console.log('📝 Creating new publisher with wallet:', paymentData.payerAddress);
           publisher = await prisma.publisher.create({
             data: {
               walletAddress: paymentData.payerAddress,
@@ -125,10 +100,10 @@ export async function POST(request: NextRequest) {
           });
           console.log('✅ Publisher created successfully!');
           console.log('   New ID:', publisher.id);
-        } catch (createError) {
-          console.error('❌ Error creating publisher:', createError);
-          throw createError;
         }
+      } catch (publisherError) {
+        console.error('❌ Error with publisher:', publisherError);
+        throw publisherError;
       }
 
       // 2. Find or create ad slot
@@ -148,19 +123,6 @@ export async function POST(request: NextRequest) {
           console.log('   Size:', adSlot.size);
         } else {
           console.log('❌ Ad slot not found, creating new one...');
-        }
-      } catch (findError) {
-        console.error('❌ Error finding ad slot:', findError);
-        throw findError;
-      }
-
-      if (!adSlot) {
-        try {
-          console.log('📝 Creating new ad slot...');
-          console.log('   Publisher ID:', publisher.id);
-          console.log('   Slot Identifier:', slotId);
-          console.log('   Size:', paymentInfo.size);
-          
           adSlot = await prisma.adSlot.create({
             data: {
               publisherId: publisher.id,
@@ -179,18 +141,67 @@ export async function POST(request: NextRequest) {
           });
           console.log('✅ Ad slot created successfully!');
           console.log('   New ID:', adSlot.id);
-        } catch (createError) {
-          console.error('❌ Error creating ad slot:', createError);
-          throw createError;
         }
+      } catch (slotError) {
+        console.error('❌ Error with ad slot:', slotError);
+        throw slotError;
       }
 
-      // 3. Create ad placement
-      console.log('\n📝 STEP 3: Creating Ad Placement');
+      // 3. Check if slot is occupied (BIDDING LOGIC STARTS HERE)
+      console.log('\n🔍 STEP 3: Checking Slot Availability & Queue');
+      
+      const activePlacement = await prisma.adPlacement.findFirst({
+        where: {
+          slotId: adSlot.id,
+          status: 'active',
+          expiresAt: { gt: new Date() }
+        }
+      });
+
+      let placementStatus: 'active' | 'queued' = 'active';
+      let actualStartsAt = startsAt;
+      let actualExpiresAt = expiresAt;
+      let queuePosition: number | null = null;
+
+      if (activePlacement) {
+        console.log('🚦 SLOT IS OCCUPIED!');
+        console.log('   Current ad expires:', activePlacement.expiresAt.toISOString());
+        console.log('   Adding to QUEUE with bidding system...');
+        
+        placementStatus = 'queued';
+        actualStartsAt = activePlacement.expiresAt;
+        actualExpiresAt = new Date(activePlacement.expiresAt.getTime() + durationMinutes * 60 * 1000);
+
+        // Calculate queue position based on bid amount (HIGHER BIDS GET PRIORITY!)
+        const higherBids = await prisma.adPlacement.count({
+          where: {
+            slotId: adSlot.id,
+            status: 'queued',
+            bidAmount: {
+              gt: parseFloat(bidAmount)
+            }
+          }
+        });
+
+        queuePosition = higherBids + 1; // Position starts at 1
+        console.log(`📊 Queue position calculated: #${queuePosition} (based on bid: ${bidAmount} XLM)`);
+        console.log(`   ${higherBids} ads have higher bids`);
+      } else {
+        console.log('✅ SLOT IS AVAILABLE!');
+        console.log('   Ad will go LIVE immediately');
+      }
+
+      // 4. Create ad placement with bid amount
+      console.log('\n📝 STEP 4: Creating Ad Placement');
       console.log('   Slot ID:', adSlot.id);
       console.log('   Publisher ID:', publisher.id);
       console.log('   Advertiser:', paymentData.payerAddress);
-      console.log('   Content URL:', placementRecord.contentUrl);
+      console.log('   Content URL:', contentUrl);
+      console.log('   Status:', placementStatus);
+      console.log('   Bid Amount:', bidAmount, 'XLM');
+      console.log('   Queue Position:', queuePosition);
+      console.log('   Starts at:', actualStartsAt.toISOString());
+      console.log('   Expires at:', actualExpiresAt.toISOString());
       
       let adPlacement;
       try {
@@ -200,15 +211,17 @@ export async function POST(request: NextRequest) {
             publisherId: publisher.id,
             advertiserWallet: paymentData.payerAddress,
             contentType: 'image',
-            contentUrl: placementRecord.contentUrl,
+            contentUrl: contentUrl,
             clickUrl: 'https://example.com',
             description: `Ad for slot ${slotId}`,
             price: paymentData.AmountPaid,
+            bidAmount: parseFloat(bidAmount), // 🎯 STORE BID AMOUNT FOR PRIORITY
             currency: 'XLM',
             durationMinutes: durationMinutes,
-            startsAt: startsAt,
-            expiresAt: expiresAt,
-            status: 'active',
+            startsAt: actualStartsAt,
+            expiresAt: actualExpiresAt,
+            status: placementStatus,
+            queuePosition: queuePosition, // 🎯 STORE QUEUE POSITION
             moderationStatus: 'approved',
           }
         });
@@ -216,17 +229,81 @@ export async function POST(request: NextRequest) {
         console.log('✅ Ad placement created successfully!');
         console.log('   Placement ID:', adPlacement.id);
         console.log('   Status:', adPlacement.status);
-        console.log('   Expires:', adPlacement.expiresAt.toISOString());
+        console.log('   Queue Position:', adPlacement.queuePosition);
       } catch (createError) {
         console.error('❌ Error creating ad placement:', createError);
         throw createError;
       }
 
-      // 4. Create payment record
-      console.log('\n💰 STEP 4: Creating Payment Record');
+      // 5. If queued, REORDER QUEUE by bid amount (PRIORITY BIDDING!)
+      if (placementStatus === 'queued') {
+        console.log('\n🔄 STEP 5: Reordering Queue by Bid Amount (Higher Bids First!)');
+        
+        // Get all queued ads sorted by bid amount (descending)
+        const queuedAds = await prisma.adPlacement.findMany({
+          where: {
+            slotId: adSlot.id,
+            status: 'queued'
+          },
+          orderBy: [
+            { bidAmount: 'desc' },  // 🎯 HIGHEST BIDS FIRST
+            { createdAt: 'asc' }     // Earlier bids break ties
+          ]
+        });
+
+        console.log(`   Found ${queuedAds.length} ads in queue`);
+        console.log('   Sorted by bid amount (highest first):');
+        queuedAds.forEach((ad, i) => {
+          console.log(`     #${i + 1}: ${ad.bidAmount} XLM (ID: ${ad.id})`);
+        });
+
+        // Update queue positions based on bid priority
+        console.log('   Updating queue positions...');
+        for (let i = 0; i < queuedAds.length; i++) {
+          await prisma.adPlacement.update({
+            where: { id: queuedAds[i].id },
+            data: { queuePosition: i + 1 }
+          });
+        }
+
+        // Recalculate start/expire times based on new queue order
+        console.log('   Recalculating activation times...');
+        let currentExpiry = activePlacement!.expiresAt;
+        
+        for (const ad of queuedAds) {
+          const newStartsAt = currentExpiry;
+          const newExpiresAt = new Date(currentExpiry.getTime() + ad.durationMinutes * 60 * 1000);
+          
+          await prisma.adPlacement.update({
+            where: { id: ad.id },
+            data: {
+              startsAt: newStartsAt,
+              expiresAt: newExpiresAt
+            }
+          });
+
+          console.log(`     Position #${ad.queuePosition}: Starts ${newStartsAt.toISOString()}`);
+          currentExpiry = newExpiresAt;
+        }
+
+        console.log('✅ Queue reordered successfully!');
+        console.log('   Higher bids now have priority activation times');
+
+        // Get updated placement info
+        const updatedPlacement = await prisma.adPlacement.findUnique({
+          where: { id: adPlacement.id }
+        });
+        
+        if (updatedPlacement) {
+          adPlacement = updatedPlacement;
+        }
+      }
+
+      // 6. Create payment record
+      console.log('\n💰 STEP 6: Creating Payment Record');
       console.log('   Placement ID:', adPlacement.id);
       console.log('   Transaction Hash:', paymentData.txHash);
-      console.log('   Amount:', paymentData.AmountPaid);
+      console.log('   Amount:', paymentData.AmountPaid, 'XLM');
       
       let payment;
       try {
@@ -247,27 +324,85 @@ export async function POST(request: NextRequest) {
 
         console.log('✅ Payment record created successfully!');
         console.log('   Payment ID:', payment.id);
-        console.log('   Status:', payment.status);
       } catch (createError) {
         console.error('❌ Error creating payment:', createError);
         throw createError;
       }
 
+      // 🎯 STEP 7: DEDUCT USED CREDITS (NEW!)
+      if (discountApplied && parseFloat(discountApplied) > 0) {
+        console.log('\n💳 STEP 7: Deducting View-to-Earn Credits');
+        console.log('   Wallet:', paymentData.payerAddress);
+        console.log('   Credits to deduct:', discountApplied, 'XLM');
+        
+        try {
+          const existingCredit = await prisma.adCredit.findUnique({
+            where: { walletAddress: paymentData.payerAddress }
+          });
+
+          if (existingCredit) {
+            await prisma.adCredit.update({
+              where: { walletAddress: paymentData.payerAddress },
+              data: {
+                credits: { decrement: parseFloat(discountApplied) },
+                totalSpent: { increment: parseFloat(discountApplied) }
+              }
+            });
+            console.log(`✅ Deducted ${discountApplied} XLM credits from ${paymentData.payerAddress}`);
+            console.log(`   Remaining credits: ${(parseFloat(existingCredit.credits.toString()) - parseFloat(discountApplied)).toFixed(2)} XLM`);
+          } else {
+            console.log('⚠️ No credit account found for wallet, skipping deduction');
+          }
+        } catch (creditError) {
+          console.error('❌ Failed to deduct credits:', creditError);
+          // Don't fail the entire upload if credit deduction fails
+          console.log('⚠️ Continuing despite credit deduction error...');
+        }
+      } else {
+        console.log('\n💳 STEP 7: No credits to deduct (discount: 0 XLM)');
+      }
+
+      // Get final queue stats
+      const finalQueuePosition = adPlacement.queuePosition || 0;
+      const totalInQueue = await prisma.adPlacement.count({
+        where: {
+          slotId: adSlot.id,
+          status: 'queued'
+        }
+      });
+
       console.log('\n' + '='.repeat(80));
       console.log('🎉 ALL DATABASE OPERATIONS COMPLETED SUCCESSFULLY!');
+      console.log('='.repeat(80));
+      console.log('📊 FINAL STATS:');
+      console.log('   Status:', adPlacement.status);
+      console.log('   Bid Amount:', bidAmount, 'XLM');
+      console.log('   Amount Paid:', paymentData.AmountPaid, 'XLM');
+      console.log('   Discount Applied:', discountApplied, 'XLM');
+      console.log('   Queue Position:', finalQueuePosition);
+      console.log('   Total in Queue:', totalInQueue);
+      console.log('   Activation Time:', adPlacement.startsAt.toISOString());
       console.log('='.repeat(80));
 
       return NextResponse.json({
         success: true,
         placement: {
           id: adPlacement.id,
-          hash: placementHash,
           contentUrl: adPlacement.contentUrl,
+          startsAt: adPlacement.startsAt.toISOString(),
           expiresAt: adPlacement.expiresAt.toISOString(),
           slotId: adSlot.slotIdentifier,
           status: adPlacement.status,
+          bidAmount: bidAmount,
+          amountPaid: paymentData.AmountPaid,
+          discountApplied: discountApplied,
+          queuePosition: finalQueuePosition,
+          totalInQueue: totalInQueue,
           transactionHash: paymentData.txHash,
-        }
+        },
+        message: placementStatus === 'queued' 
+          ? `🎯 Ad added to queue at position #${finalQueuePosition} with bid ${bidAmount} XLM! Higher bids get priority.`
+          : `🚀 Ad is now LIVE! Expires at ${adPlacement.expiresAt.toISOString()}`
       });
 
     } catch (dbError) {

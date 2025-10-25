@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import * as StellarSdk from 'stellar-sdk';
 import { getAddress, signTransaction, isConnected, setAllowed } from '@stellar/freighter-api';
+import { toast } from 'sonner'; // 🎉 ADDED TOAST
 
 const WalletIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,6 +35,18 @@ const ArrowLeftIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const ClockIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const TrophyIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+
 interface ConnectionStatus {
   type: 'idle' | 'loading' | 'success' | 'error';
   message: string;
@@ -47,17 +60,30 @@ interface PaymentInfo {
   category: string;
 }
 
+interface QueuedAd {
+  position: number;
+  bidAmount: string;
+  startsAt: string;
+  expiresAt: string;
+}
+
 interface QueueInfo {
   slotId: string;
   position: number;
   totalInQueue: number;
   nextActivation?: string;
   isAvailable: boolean;
+  minimumBid: string;
+  currentAd?: {
+    expiresAt: string;
+    timeRemaining: number;
+  };
+  queueInfo?: QueuedAd[];
 }
 
 // Stellar configuration
-const STELLAR_RECIPIENT = 'GD3CBC4DDBHVP2W67P3I67SORRCWMNZAGGEGXON3JX25WPU7Q2OUH4LN'; // CHANGE THIS
-const STELLAR_NETWORK = 'TESTNET'; // or 'MAINNET'
+const STELLAR_RECIPIENT = 'GD3CBC4DDBHVP2W67P3I67SORRCWMNZAGGEGXON3JX25WPU7Q2OUH4LN';
+const STELLAR_NETWORK = 'TESTNET';
 
 function CheckoutPageContent() {
   const router = useRouter();
@@ -69,6 +95,11 @@ function CheckoutPageContent() {
   const [isBidding, setIsBidding] = useState<boolean>(false);
   const [stellarAddress, setStellarAddress] = useState<string>('');
   const [isStellarConnected, setIsStellarConnected] = useState(false);
+
+  // 🎯 ADDED: View-to-Earn Credits State
+  const [userCredits, setUserCredits] = useState<string>('0');
+  const [appliedDiscount, setAppliedDiscount] = useState<string>('0');
+  const [finalBidAmount, setFinalBidAmount] = useState<string>('');
 
   // Parse payment information from URL parameters
   useEffect(() => {
@@ -88,9 +119,19 @@ function CheckoutPageContent() {
       });
       
       setBidAmount(price);
+      setFinalBidAmount(price);
       fetchQueueInfo(slotId);
     }
   }, [searchParams]);
+
+  // 🎯 ADDED: Auto-apply discount when bidAmount changes
+  useEffect(() => {
+    if (isStellarConnected && parseFloat(userCredits) > 0) {
+      applyDiscount(userCredits, bidAmount);
+    } else {
+      setFinalBidAmount(bidAmount);
+    }
+  }, [bidAmount, userCredits, isStellarConnected]);
 
   // Check if Freighter is installed on mount
   useEffect(() => {
@@ -107,6 +148,9 @@ function CheckoutPageContent() {
         type: 'error', 
         message: 'Please install Freighter wallet extension' 
       });
+      toast.error('Freighter Wallet Not Found', {
+        description: 'Please install Freighter wallet extension to continue'
+      });
     }
   };
 
@@ -117,16 +161,101 @@ function CheckoutPageContent() {
         const queueData = await response.json();
         setQueueInfo(queueData);
         setIsBidding(!queueData.isAvailable);
+        
+        // Set minimum bid if slot is occupied
+        if (!queueData.isAvailable && queueData.minimumBid) {
+          setBidAmount(queueData.minimumBid);
+          toast.info('Slot Occupied', {
+            description: `Minimum bid: ${queueData.minimumBid} XLM to join queue`,
+            duration: 4000
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching queue info:', error);
     }
   };
 
+  // 🎯 ADDED: Fetch user credits
+  const fetchUserCredits = async (walletAddress: string) => {
+    try {
+      console.log('💰 Fetching credits for:', walletAddress);
+      const response = await fetch(`/api/credits/${walletAddress}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserCredits(data.credits);
+        
+        // 🎉 TOAST: Credits found
+        if (parseFloat(data.credits) > 0) {
+          toast.success('💰 View-to-Earn Credits Found!', {
+            description: `You have ${data.credits} XLM in credits available!`,
+            duration: 5000,
+          });
+        }
+        
+        console.log(`✅ User has ${data.credits} XLM in credits`);
+        applyDiscount(data.credits, bidAmount);
+      }
+    } catch (error) {
+      console.error('Error fetching credits:', error);
+      toast.error('Failed to Load Credits', {
+        description: 'Could not fetch your View-to-Earn credits'
+      });
+    }
+  };
+
+  // 🎯 ADDED: Apply discount function
+  const applyDiscount = (credits: string, currentBid: string) => {
+    const creditsNum = parseFloat(credits);
+    const bidNum = parseFloat(currentBid);
+    
+    if (creditsNum > 0 && bidNum > 0) {
+      const discount = Math.min(creditsNum, bidNum * 0.5); // Max 50% discount
+      const finalAmount = Math.max(0.01, bidNum - discount); // Minimum 0.01 XLM
+      
+      setAppliedDiscount(discount.toFixed(2));
+      setFinalBidAmount(finalAmount.toFixed(2));
+      
+      // 🎉 TOAST: Discount applied
+      if (discount > 0) {
+        toast.success('🎉 Discount Applied!', {
+          description: `You saved ${discount.toFixed(2)} XLM! Pay only ${finalAmount.toFixed(2)} XLM`,
+          duration: 5000,
+        });
+      }
+      
+      console.log(`💰 Discount applied: ${discount.toFixed(2)} XLM`);
+      console.log(`💰 Final amount: ${finalAmount.toFixed(2)} XLM`);
+    } else {
+      setAppliedDiscount('0');
+      setFinalBidAmount(currentBid);
+    }
+  };
+
+  const formatTimeRemaining = (milliseconds: number) => {
+    const hours = Math.floor(milliseconds / (1000 * 60 * 60));
+    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const formatDateTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const handleDisconnect = () => {
     setIsStellarConnected(false);
     setStellarAddress('');
+    setUserCredits('0');
+    setAppliedDiscount('0');
+    setFinalBidAmount(bidAmount);
     setConnectionStatus({ type: 'idle', message: '' });
+    toast.info('Wallet Disconnected');
   };
 
   const connectStellar = async () => {
@@ -144,6 +273,10 @@ function CheckoutPageContent() {
         setStellarAddress(result.address);
         setIsStellarConnected(true);
         setConnectionStatus({ type: 'success', message: 'Connected successfully!' });
+        
+        // 🎯 ADDED: Fetch credits after connection
+        await fetchUserCredits(result.address);
+        
         setTimeout(() => setConnectionStatus({ type: 'idle', message: '' }), 2000);
       } else {
         throw new Error('No address returned from Freighter');
@@ -154,17 +287,23 @@ function CheckoutPageContent() {
         type: 'error', 
         message: error.message || 'Failed to connect Freighter wallet. Make sure it is installed and unlocked.' 
       });
+      toast.error('Connection Failed', {
+        description: error.message || 'Could not connect to Freighter wallet'
+      });
     }
   };
 
-  // Stellar payment handler with redirect to /upload
   const handleStellarPayment = async () => {
     if (!stellarAddress || !paymentInfo) return;
     
     try {
       setConnectionStatus({ type: 'loading', message: 'Preparing Stellar payment...' });
       
-      const finalAmount = isBidding ? bidAmount : paymentInfo.price;
+      // 🎯 UPDATED: Use final bid amount (after discount)
+      const paymentAmount = finalBidAmount || bidAmount;
+      const originalBidAmount = bidAmount;
+      const discountUsed = appliedDiscount;
+      
       const server = new StellarSdk.Horizon.Server(
         STELLAR_NETWORK === 'TESTNET' 
           ? 'https://horizon-testnet.stellar.org' 
@@ -183,11 +322,12 @@ function CheckoutPageContent() {
         .addOperation(
           StellarSdk.Operation.payment({
             destination: STELLAR_RECIPIENT,
-            asset: StellarSdk.Asset.native(), // XLM
-            amount: finalAmount
+            asset: StellarSdk.Asset.native(),
+            amount: paymentAmount
           })
         )
-        .addMemo(StellarSdk.Memo.text(`Ad402:${paymentInfo.slotId}`))
+        // 🎯 UPDATED: Include discount in memo
+        .addMemo(StellarSdk.Memo.text(`SwiftAd:${paymentInfo.slotId}:${discountUsed}`))
         .setTimeout(180)
         .build();
       
@@ -214,7 +354,7 @@ function CheckoutPageContent() {
         const result = await server.submitTransaction(signedTx);
         console.log('Transaction result:', result);
         
-        // Record payment in backend
+        // Record payment
         try {
           await fetch('/api/record-stellar-payment', {
             method: 'POST',
@@ -222,12 +362,14 @@ function CheckoutPageContent() {
             body: JSON.stringify({
               transactionHash: result.hash,
               slotId: paymentInfo.slotId,
-              amount: finalAmount,
+              amount: paymentAmount,
+              originalBid: originalBidAmount,
+              discountApplied: discountUsed,
               asset: 'XLM',
               network: STELLAR_NETWORK.toLowerCase(),
               from: stellarAddress,
               to: STELLAR_RECIPIENT,
-              memo: `Ad402:${paymentInfo.slotId}`,
+              memo: `SwiftAd:${paymentInfo.slotId}:${discountUsed}`,
               ledger: result.ledger,
               timestamp: new Date().toISOString(),
               isBid: isBidding
@@ -242,91 +384,74 @@ function CheckoutPageContent() {
           message: 'Payment successful! Redirecting to upload...' 
         });
         
-        // Prepare payment data for upload page
+        // 🎉 TOAST: Payment successful
+        toast.success('🚀 Payment Successful!', {
+          description: parseFloat(discountUsed) > 0 
+            ? `Paid ${paymentAmount} XLM (saved ${discountUsed} XLM!)` 
+            : `Paid ${paymentAmount} XLM`,
+          duration: 5000,
+        });
+        
         const paymentData = {
           index: paymentInfo.slotId,
-          validUpto: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 days
+          validUpto: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
           txHash: result.hash,
-          AmountPaid: finalAmount,
-          bidAmount: finalAmount,
+          AmountPaid: paymentAmount,
+          bidAmount: originalBidAmount,
+          discountApplied: discountUsed,
           payerAddress: stellarAddress,
           recieverAddress: STELLAR_RECIPIENT
         };
 
-        // Store payment data in session storage
         sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
-        sessionStorage.setItem('paymentInfo', JSON.stringify(paymentInfo));
         
-        // Redirect to upload page with parameters
         setTimeout(() => {
-          const uploadParams = new URLSearchParams({
-            slotId: paymentInfo.slotId,
-            price: paymentInfo.price,
-            bidAmount: finalAmount,
-            size: paymentInfo.size,
-            category: paymentInfo.category,
-            transactionHash: result.hash,
-            walletAddress: stellarAddress,
-            network: `Stellar ${STELLAR_NETWORK}`
-          });
-          router.push(`/upload?${uploadParams.toString()}`);
+          // 🎯 UPDATED: Include all payment details in redirect
+          router.push(
+            `/upload?slotId=${paymentInfo.slotId}` +
+            `&price=${paymentInfo.price}` +
+            `&bidAmount=${originalBidAmount}` +
+            `&finalAmount=${paymentAmount}` +
+            `&discountApplied=${discountUsed}` +
+            `&size=${paymentInfo.size}` +
+            `&category=${paymentInfo.category}` +
+            `&transactionHash=${result.hash}` +
+            `&walletAddress=${stellarAddress}` +
+            `&network=${STELLAR_NETWORK}`
+          );
         }, 2000);
-        
       } else {
-        throw new Error('Transaction signing failed or was cancelled');
+        throw new Error('Transaction signing failed');
       }
     } catch (error: any) {
-      console.error('Stellar payment error:', error);
-      
-      let errorMessage = 'Payment failed';
-      
-      if (error.response?.data) {
-        console.error('Horizon error details:', error.response.data);
-        const horizonError = error.response.data;
-        
-        if (horizonError.extras?.result_codes) {
-          const codes = horizonError.extras.result_codes;
-          console.error('Transaction result codes:', codes);
-          
-          if (codes.transaction === 'tx_bad_seq') {
-            errorMessage = 'Sequence number error. Please refresh and try again.';
-          } else if (codes.transaction === 'tx_insufficient_balance') {
-            errorMessage = 'Insufficient XLM balance for transaction + fees.';
-          } else if (codes.operations && codes.operations[0] === 'op_no_destination') {
-            errorMessage = 'Recipient account not found. Please contact support.';
-          } else if (codes.operations) {
-            errorMessage = `Operation failed: ${codes.operations.join(', ')}`;
-          } else {
-            errorMessage = `Transaction failed: ${codes.transaction}`;
-          }
-        } else if (horizonError.title) {
-          errorMessage = horizonError.title;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
+      console.error('Payment error:', error);
       setConnectionStatus({ 
         type: 'error', 
-        message: errorMessage 
+        message: error.message || 'Payment failed. Please try again.' 
+      });
+      toast.error('Payment Failed', {
+        description: error.message || 'Transaction could not be completed'
       });
     }
   };
 
-  const formatAddress = (addr: string) => {
-    if (!addr) return '';
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const formatAddress = (address: string) => {
+    if (!address) return '';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   const renderConnectionStatus = () => {
     if (connectionStatus.type === 'idle') return null;
 
     return (
-      <Card className="border-border">
+      <Card className={`mb-6 ${
+        connectionStatus.type === 'error' ? 'border-red-500' : 
+        connectionStatus.type === 'success' ? 'border-green-500' : ''
+      }`}>
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             {connectionStatus.type === 'loading' && (
-              <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent"></div>
+              <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
             )}
             {connectionStatus.type === 'success' && (
               <CheckCircleIcon className="w-5 h-5 text-green-500" />
@@ -391,25 +516,98 @@ function CheckoutPageContent() {
           </Card>
         )}
 
-        {queueInfo && (
-          <Card className="mb-6 border-border bg-card">
+        {queueInfo && !queueInfo.isAvailable && (
+          <Card className="mb-6 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
             <CardContent className="p-6">
               <div className="text-center mb-4">
-                <h3 className="font-mono font-semibold text-foreground text-sm mb-2">
-                  {queueInfo.isAvailable ? 'Slot Available' : 'Slot Occupied'}
+                <ClockIcon className="w-8 h-8 text-yellow-600 dark:text-yellow-400 mx-auto mb-2" />
+                <h3 className="font-mono font-semibold text-yellow-700 dark:text-yellow-300 text-sm mb-2">
+                  Slot Currently Occupied
                 </h3>
-                {!queueInfo.isAvailable && (
-                  <div className="space-y-2 text-xs font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Queue Position:</span>
-                      <span className="text-foreground">{queueInfo.position + 1}</span>
+                <div className="space-y-2 text-xs font-mono text-yellow-700 dark:text-yellow-300">
+                  {queueInfo.currentAd && (
+                    <div className="flex justify-between px-4">
+                      <span>Current ad expires:</span>
+                      <span className="font-bold">
+                        {formatTimeRemaining(queueInfo.currentAd.timeRemaining)}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total in Queue:</span>
-                      <span className="text-foreground">{queueInfo.totalInQueue}</span>
+                  )}
+                  <div className="flex justify-between px-4">
+                    <span>Ads in queue:</span>
+                    <span className="font-bold">{queueInfo.totalInQueue}</span>
+                  </div>
+                  <div className="flex justify-between px-4">
+                    <span>Minimum bid:</span>
+                    <span className="font-bold">{queueInfo.minimumBid} XLM</span>
+                  </div>
+                </div>
+              </div>
+
+              {queueInfo.queueInfo && queueInfo.queueInfo.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-yellow-300 dark:border-yellow-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrophyIcon className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                    <h4 className="text-xs font-mono font-semibold text-yellow-700 dark:text-yellow-300">
+                      Current Queue (Sorted by Bid)
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    {queueInfo.queueInfo.slice(0, 3).map((ad, index) => (
+                      <div 
+                        key={index}
+                        className="flex justify-between items-center text-xs font-mono bg-yellow-100 dark:bg-yellow-900 p-2 rounded"
+                      >
+                        <span className="text-yellow-700 dark:text-yellow-300">
+                          #{ad.position} - {ad.bidAmount} XLM
+                        </span>
+                        <span className="text-yellow-600 dark:text-yellow-400 text-[10px]">
+                          Starts: {formatDateTime(ad.startsAt)}
+                        </span>
+                      </div>
+                    ))}
+                    {queueInfo.queueInfo.length > 3 && (
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 text-center font-mono">
+                        +{queueInfo.queueInfo.length - 3} more in queue
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 🎯 ADDED: Credits Display Card */}
+        {isStellarConnected && parseFloat(userCredits) > 0 && (
+          <Card className="mb-6 border-green-500 bg-green-50 dark:bg-green-950">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <h3 className="font-mono font-semibold text-green-700 dark:text-green-300 text-sm mb-2">
+                  🎉 View-to-Earn Credits Available!
+                </h3>
+                <div className="text-2xl font-mono font-bold text-green-600 dark:text-green-400 mb-2">
+                  {userCredits} XLM
+                </div>
+                {parseFloat(appliedDiscount) > 0 && (
+                  <div className="space-y-1 text-xs font-mono text-green-700 dark:text-green-300">
+                    <div className="flex justify-between items-center px-4">
+                      <span>Original Bid:</span>
+                      <span className="line-through">{bidAmount} XLM</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4">
+                      <span>Discount:</span>
+                      <span className="font-bold">-{appliedDiscount} XLM</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 pt-2 border-t border-green-300 dark:border-green-700">
+                      <span className="font-bold">You Pay:</span>
+                      <span className="font-bold text-lg">{finalBidAmount} XLM</span>
                     </div>
                   </div>
                 )}
+                <p className="text-xs text-green-600 dark:text-green-400 mt-3">
+                  Earned by viewing ads on this site!
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -423,12 +621,20 @@ function CheckoutPageContent() {
                   <h3 className="font-mono font-semibold text-foreground text-sm mb-2">
                     {isBidding ? 'Bid Amount' : 'Purchase Amount'}
                   </h3>
-                  <p className="text-xs text-muted-foreground font-mono">
+                  <p className="text-xs text-muted-foreground font-mono mb-2">
                     {isBidding 
                       ? 'Higher bids get priority in the queue' 
                       : 'Slot is available for immediate purchase'
                     }
                   </p>
+                  {/* 🎯 ADDED: Discount indicator */}
+                  {parseFloat(appliedDiscount) > 0 && (
+                    <div className="bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 rounded p-2 mb-3">
+                      <p className="text-xs text-green-700 dark:text-green-300 font-mono">
+                        💰 {appliedDiscount} XLM discount will be applied!
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -452,6 +658,7 @@ function CheckoutPageContent() {
                   </div>
                   <p className="text-xs text-muted-foreground font-mono">
                     Minimum: {paymentInfo.price} XLM
+                    {isBidding && queueInfo && ` • Suggested: ${queueInfo.minimumBid} XLM`}
                   </p>
                 </div>
               </div>
@@ -499,11 +706,16 @@ function CheckoutPageContent() {
                       className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-mono h-12"
                       disabled={connectionStatus.type === 'loading'}
                     >
+                      {/* 🎯 UPDATED: Show discount in button */}
                       {connectionStatus.type === 'loading' 
                         ? 'Processing...' 
                         : isBidding 
-                          ? `Bid ${bidAmount} XLM` 
-                          : `Pay ${bidAmount} XLM`
+                          ? parseFloat(appliedDiscount) > 0
+                            ? `Bid ${finalBidAmount} XLM (${appliedDiscount} XLM discount)`
+                            : `Bid ${bidAmount} XLM`
+                          : parseFloat(appliedDiscount) > 0
+                            ? `Pay ${finalBidAmount} XLM (${appliedDiscount} XLM discount)`
+                            : `Pay ${bidAmount} XLM`
                       }
                     </Button>
                     
