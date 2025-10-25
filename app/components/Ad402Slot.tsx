@@ -37,33 +37,33 @@ export const Ad402Slot: React.FC<Ad402SlotProps> = ({
 
   // Function to fetch ad content
   const fetchAdContent = async () => {
-    try {
-      setIsLoading(true);
+  try {
+    setIsLoading(true);
+    
+    console.log('🔍 Fetching ad for slot:', slotId);
+    const response = await fetch(`/api/ads/${slotId}`); // ✅ Changed URL
+    
+    if (response.ok) {
+      const data = await response.json(); // ✅ Read JSON only once
+      console.log('📦 Ad data:', data);
       
-      // Check if there's an ad for this slot
-      console.log(slotId)
-      const response = await fetch(`/api/ad-slots/${slotId}`);
-      let data = await response.json();
-      // console.log(data);
-      if (response.ok) {
-        const adData = await response.json();
-        if (adData.hasAd || adData.contentUrl) {
-          setAdContent(adData.contentUrl);
-          setHasAd(true);
-        } else {
-          setHasAd(false);
-        }
+      if (data.hasAd && data.contentUrl) {
+        setAdContent(data.contentUrl);
+        setHasAd(true);
       } else {
         setHasAd(false);
       }
-    } catch (error) {
-      console.error('Error fetching ad content:', error);
+    } else {
+      console.log('❌ No ad found for slot:', slotId);
       setHasAd(false);
-    } finally {
-      setIsLoading(false);
     }
-  };
-
+  } catch (error) {
+    console.error('❌ Error fetching ad content:', error);
+    setHasAd(false);
+  } finally {
+    setIsLoading(false);
+  }
+};
   // Function to fetch queue information
   const fetchQueueInfo = async () => {
     try {
