@@ -383,18 +383,6 @@ We encourage community participation! Here's your pathway to contributing:
 - Keep documentation synchronized with code changes
 - Verify mobile and responsive behavior
 
-## 📄 **License**
-
-Released under the **MIT License** - refer to [LICENSE](LICENSE) file for complete terms.
-
-## 🎉 **Start Building Today**
-
-**Content Creators**: Integrate the Ad402 SDK and begin monetizing your digital properties within minutes.
-
-**Advertisers**: Acquire premium inventory with USDC and connect with engaged audiences through our trustless platform.
-
-**Developers**: Extend our open-source infrastructure and shape the evolution of decentralized advertising.
-
 ---
 
 **Ad402** - *Transforming digital advertising through decentralization and cryptographic trust.* 🚀
