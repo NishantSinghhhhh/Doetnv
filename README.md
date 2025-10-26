@@ -70,11 +70,6 @@ mono-repo/
     ├── src/                         # Implementation code
     └── routes/                      # Endpoint definitions
 ```
-
-### 🔗 **Platform Access**
-- **Live Platform**: [https://ad402.io](https://ad402.vercel.app)
-- **NPM Package**: [npmjs.com/package/ad402-sdk](https://www.npmjs.com/package/ad402-sdk)
-
 ## 🚀 **Core Capabilities**
 
 ### 💰 **Settlement Infrastructure**
