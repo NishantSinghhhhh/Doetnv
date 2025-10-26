@@ -75,7 +75,7 @@ export default function BlogDemo() {
               <h2 className="text-3xl font-bold text-gray-900 mt-12 mb-6">How It Works</h2>
               
               <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                The Ad-402 platform uses a simple but powerful mechanism:
+                The Swift-Add Platform uses a simple but powerful mechanism:
               </p>
               
               <ol className="space-y-4 mb-10">

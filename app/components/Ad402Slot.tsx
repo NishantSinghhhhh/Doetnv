@@ -116,7 +116,6 @@ useEffect(() => {
       
       if (data.activatedCount > 0) {
         console.log('🎉 Queue processed! Refreshing ad...');
-        // Refresh the ad content
         fetchAdContent();
       }
     } catch (error) {
