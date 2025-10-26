@@ -23,21 +23,8 @@ Built as a **comprehensive Web3 advertising infrastructure** showcasing:
 
 ## 🏗️ **System Architecture**
 
-<img width="639" height="384" alt="SS 2025-09-28 at 09 02 25" src="https://github.com/user-attachments/assets/b8a9e991-52d9-40cd-a9f7-d59bdc2efb5e" />
+![WhatsApp Image 2025-10-26 at 12 37 03](https://github.com/user-attachments/assets/b7c3ed35-0fb1-438d-bacb-a562d364a76d)
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Client        │    │   Settlement    │    │   Repository    │
-│   (Next.js)     │◄──►│   (X402/USDC)   │◄──►│   (IPFS/LH)     │
-│   Interface     │    │   On-Chain      │    │   Distributed   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   SwiftAd SDK   │    │   Endpoints     │    │   Auction Pool  │
-│   Publisher Kit │    │   Serverless    │    │   Bid Manager   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
 
 ## 📁 **Repository Layout**
 
