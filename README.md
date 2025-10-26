@@ -1,10 +1,10 @@
-# 🚀 Ad402 - Web3 Advertising Infrastructure
+# 🚀 SwiftAd - Web3 Advertising Infrastructure
 
 > **A next-generation advertising platform leveraging blockchain technology, distributed storage, and dynamic bidding mechanisms for trustless, decentralized ad management.**
 
 ## 🎯 **Platform Overview**
 
-Ad402 represents a **fully decentralized advertising infrastructure** that transforms the relationship between content creators and brands. Engineered for the Web3 landscape, it delivers:
+SwiftAd represents a **fully decentralized advertising infrastructure** that transforms the relationship between content creators and brands. Engineered for the Web3 landscape, it delivers:
 
 - **🔗 On-Chain Payments**: Trustless USDC settlements using EIP-3009 protocol
 - **🌐 Distributed Storage**: Permanent, censorship-resistant hosting via IPFS
@@ -34,7 +34,7 @@ Built as a **comprehensive Web3 advertising infrastructure** showcasing:
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Ad402 SDK     │    │   Endpoints     │    │   Auction Pool  │
+│   SwiftAd SDK   │    │   Endpoints     │    │   Auction Pool  │
 │   Publisher Kit │    │   Serverless    │    │   Bid Manager   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
@@ -56,7 +56,7 @@ mono-repo/
 │   │   ├── dashboard/               # Creator metrics panel
 │   │   └── example-ads/             # Live demonstration slots
 │   ├── components/                  # UI Building Blocks
-│   │   ├── Ad402Slot.tsx            # Primary slot renderer
+│   │   ├── SwiftAdSlot.tsx          # Primary slot renderer
 │   │   ├── AdSlot.tsx               # Secondary slot variant
 │   │   ├── WalletConnectModal.tsx   # Web3 wallet bridge
 │   │   └── ui/                      # Component primitives
@@ -69,8 +69,8 @@ mono-repo/
 ├── 📦 ad402-sdk/                    # Publisher Integration Kit
 │   ├── src/                         # SDK Implementation
 │   │   ├── components/              # Exportable components
-│   │   │   ├── Ad402Provider.tsx    # Configuration provider
-│   │   │   └── Ad402Slot.tsx        # Slot implementation
+│   │   │   ├── SwiftAdProvider.tsx  # Configuration provider
+│   │   │   └── SwiftAdSlot.tsx      # Slot implementation
 │   │   ├── types/                   # Interface definitions
 │   │   └── utils/                   # Helper functions
 │   ├── examples/                    # Usage demonstrations
@@ -116,7 +116,7 @@ mono-repo/
 
 ## 📦 **Publisher SDK**
 
-The Ad402 SDK enables effortless integration of decentralized advertising across any web property:
+The SwiftAd SDK enables effortless integration of decentralized advertising across any web property:
 
 ### 🎯 **Rapid Setup**
 
@@ -125,11 +125,11 @@ The Ad402 SDK enables effortless integration of decentralized advertising across
 npm install ad402-sdk
 
 // 2. Configure your application
-import { Ad402Provider } from 'ad402-sdk';
+import { SwiftAdProvider } from 'ad402-sdk';
 
 export default function RootLayout({ children }) {
   return (
-    <Ad402Provider
+    <SwiftAdProvider
       config={{
         websiteId: 'your-website-id',
         walletAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
@@ -137,12 +137,12 @@ export default function RootLayout({ children }) {
       }}
     >
       {children}
-    </Ad402Provider>
+    </SwiftAdProvider>
   );
 }
 
 // 3. Deploy ad inventory across your site
-import { Ad402Slot } from 'ad402-sdk';
+import { SwiftAdSlot } from 'ad402-sdk';
 
 export default function HomePage() {
   return (
@@ -150,7 +150,7 @@ export default function HomePage() {
       <h1>Welcome to My Website</h1>
       
       {/* Top banner placement */}
-      <Ad402Slot
+      <SwiftAdSlot
         slotId="header-banner"
         size="banner"
         price="0.25"
@@ -162,7 +162,7 @@ export default function HomePage() {
       </main>
       
       {/* Vertical sidebar unit */}
-      <Ad402Slot
+      <SwiftAdSlot
         slotId="sidebar-ad"
         size="sidebar"
         price="0.15"
@@ -306,7 +306,7 @@ LIGHTHOUSE_STORAGE_HASH=your_existing_ipfs_hash
 - **Adaptive Layout**: Fluid responsiveness across viewport sizes
 
 ### 🧩 **Component Library**
-- **Ad402Slot**: Primary inventory unit with integrated bidding
+- **SwiftAdSlot**: Primary inventory unit with integrated bidding
 - **Checkout Interface**: Streamlined payment and auction workflow
 - **Upload Portal**: Intuitive creative submission with progress indicators
 - **Analytics Dashboard**: Publisher performance and revenue insights
@@ -385,6 +385,6 @@ We encourage community participation! Here's your pathway to contributing:
 
 ---
 
-**Ad402** - *Transforming digital advertising through decentralization and cryptographic trust.* 🚀
+**SwiftAd** - *Transforming digital advertising through decentralization and cryptographic trust.* 🚀
 
 *Crafted with ❤️ for the Web3 ecosystem*
